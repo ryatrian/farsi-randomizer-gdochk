@@ -1,4 +1,5 @@
 
+
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { StorageService } from './storage';
@@ -102,7 +103,7 @@ export class NotificationService {
       await this.cancelAllNotifications();
 
       const now = new Date();
-      const schedules: Array<{ id: string; timestamp: number; text: string }> = [];
+      const schedules: { id: string; timestamp: number; text: string }[] = [];
 
       // Generate schedules for the next 7 days
       for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -203,14 +204,17 @@ export class NotificationService {
         console.log('Processing due schedule:', schedule.id);
         
         // Show notification with action button
-        await Notifications.presentNotificationAsync({
-          title: 'پیام آماده ارسال',
-          body: schedule.text.length > 100 ? schedule.text.substring(0, 100) + '...' : schedule.text,
-          data: { 
-            text: schedule.text,
-            scheduleId: schedule.id,
-            action: 'send_whatsapp'
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'پیام آماده ارسال',
+            body: schedule.text.length > 100 ? schedule.text.substring(0, 100) + '...' : schedule.text,
+            data: { 
+              text: schedule.text,
+              scheduleId: schedule.id,
+              action: 'send_whatsapp'
+            },
           },
+          trigger: null, // Show immediately
         });
 
         // Remove the schedule

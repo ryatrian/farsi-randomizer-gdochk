@@ -1,4 +1,5 @@
 
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AppState {
@@ -10,7 +11,7 @@ export interface AppState {
   selectedDays: boolean[];
   timeWindow: { start: string; end: string };
   messagesPerDay: number;
-  schedules: Array<{ id: string; timestamp: number; text: string }>;
+  schedules: { id: string; timestamp: number; text: string }[];
 }
 
 const STORAGE_KEY = 'persian_excel_app_state';
@@ -183,7 +184,7 @@ export class StorageService {
     }
   }
 
-  static async getDueSchedules(): Promise<Array<{ id: string; timestamp: number; text: string }>> {
+  static async getDueSchedules(): Promise<{ id: string; timestamp: number; text: string }[]> {
     try {
       const currentState = await this.getAppState();
       const now = Date.now();
