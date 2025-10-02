@@ -14,6 +14,21 @@ export class ExcelParser {
     return validExtensions.includes(extension);
   }
 
+  // Main method that the home screen calls
+  static async parseExcel(fileUri: string): Promise<string[]> {
+    console.log('parseExcel called with URI:', fileUri);
+    
+    const result = await this.parseFile(fileUri);
+    
+    if (!result.success) {
+      console.log('Parse failed:', result.error);
+      throw new Error(result.error || 'خطا در پردازش فایل اکسل');
+    }
+    
+    console.log('Parse successful, returning texts:', result.texts.length);
+    return result.texts;
+  }
+
   static async parseFile(fileUri: string): Promise<ParseResult> {
     try {
       console.log('Starting to parse Excel file:', fileUri);

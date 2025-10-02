@@ -40,6 +40,7 @@ export default function HomeScreen() {
 
   const loadAppState = async () => {
     try {
+      console.log('Loading app state...');
       const state = await StorageService.getAppState();
       setAppState(state);
       console.log('App state loaded:', {
@@ -67,19 +68,41 @@ export default function HomeScreen() {
         copyToCacheDirectory: true,
       });
 
+      console.log('Document picker result:', result);
+
       if (result.canceled) {
         console.log('File selection cancelled');
         setIsLoading(false);
         return;
       }
 
-      console.log('File selected:', result.assets[0].name);
+      if (!result.assets || result.assets.length === 0) {
+        console.log('No file selected');
+        Alert.alert('خطا', 'هیچ فایلی انتخاب نشد');
+        setIsLoading(false);
+        return;
+      }
 
       const file = result.assets[0];
+      console.log('File selected:', {
+        name: file.name,
+        size: file.size,
+        type: file.mimeType,
+        uri: file.uri
+      });
+
+      // Validate file type
+      if (!ExcelParser.validateFileType(file.name)) {
+        Alert.alert('خطا', 'لطفاً فایل اکسل معتبر (.xlsx یا .xls) انتخاب کنید');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Parsing Excel file...');
       const texts = await ExcelParser.parseExcel(file.uri);
 
       if (texts.length === 0) {
-        Alert.alert('خطا', 'هیچ متنی در فایل یافت نشد');
+        Alert.alert('خطا', 'هیچ متنی در ستون اول فایل یافت نشد');
         setIsLoading(false);
         return;
       }
@@ -97,7 +120,7 @@ export default function HomeScreen() {
       await loadAppState();
     } catch (error) {
       console.log('Error uploading file:', error);
-      Alert.alert('خطا', 'خطا در پردازش فایل');
+      Alert.alert('خطا', `خطا در پردازش فایل: ${error instanceof Error ? error.message : 'خطای نامشخص'}`);
     } finally {
       setIsLoading(false);
     }
@@ -200,11 +223,32 @@ export default function HomeScreen() {
 
   const handleResetProgress = async () => {
     try {
-      await StorageService.resetProgress();
-      await loadAppState();
-      Alert.alert('موفقیت', 'پیشرفت ریست شد');
+      console.log('Resetting progress...');
+      
+      Alert.alert(
+        'تأیید ریست',
+        'آیا مطمئن هستید که می‌خواهید پیشرفت را ریست کنید؟ تمام متن‌های استفاده شده دوباره در دسترس قرار می‌گیرند.',
+        [
+          { text: 'خیر', style: 'cancel' },
+          { 
+            text: 'بله، ریست کن', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await StorageService.resetProgress();
+                console.log('Progress reset successfully');
+                await loadAppState();
+                Alert.alert('موفقیت', 'پیشرفت با موفقیت ریست شد');
+              } catch (error) {
+                console.log('Error resetting progress:', error);
+                Alert.alert('خطا', 'خطا در ریست کردن پیشرفت');
+              }
+            }
+          },
+        ]
+      );
     } catch (error) {
-      console.log('Error resetting progress:', error);
+      console.log('Error in reset confirmation:', error);
       Alert.alert('خطا', 'خطا در ریست کردن پیشرفت');
     }
   };
@@ -315,8 +359,9 @@ export default function HomeScreen() {
 
           {appState && appState.allTexts.length > 0 && (
             <TouchableOpacity
-              style={buttonStyles.warning}
+              style={[buttonStyles.warning, isLoading && buttonStyles.disabled]}
               onPress={handleResetProgress}
+              disabled={isLoading}
             >
               <IconSymbol name="arrow.clockwise" size={24} color={colors.text} />
               <Text style={buttonStyles.warningText}>ریست پیشرفت</Text>
