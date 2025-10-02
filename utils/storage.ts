@@ -1,5 +1,4 @@
 
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AppState {
@@ -12,6 +11,7 @@ export interface AppState {
   timeWindow: { start: string; end: string };
   messagesPerDay: number;
   schedules: { id: string; timestamp: number; text: string }[];
+  whatsappPhoneNumber: string | null;
 }
 
 const STORAGE_KEY = 'persian_excel_app_state';
@@ -26,6 +26,7 @@ const defaultState: AppState = {
   timeWindow: { start: '09:00', end: '17:00' },
   messagesPerDay: 1,
   schedules: [],
+  whatsappPhoneNumber: null,
 };
 
 export class StorageService {
@@ -149,6 +150,33 @@ export class StorageService {
     } catch (error) {
       console.log('Error updating auto send settings:', error);
       throw error;
+    }
+  }
+
+  static async saveWhatsAppPhoneNumber(phoneNumber: string | null): Promise<void> {
+    try {
+      const currentState = await this.getAppState();
+      
+      const updatedState: AppState = {
+        ...currentState,
+        whatsappPhoneNumber: phoneNumber,
+      };
+
+      await this.saveAppState(updatedState);
+      console.log('WhatsApp phone number saved:', phoneNumber);
+    } catch (error) {
+      console.log('Error saving WhatsApp phone number:', error);
+      throw error;
+    }
+  }
+
+  static async getWhatsAppPhoneNumber(): Promise<string | null> {
+    try {
+      const currentState = await this.getAppState();
+      return currentState.whatsappPhoneNumber;
+    } catch (error) {
+      console.log('Error getting WhatsApp phone number:', error);
+      return null;
     }
   }
 

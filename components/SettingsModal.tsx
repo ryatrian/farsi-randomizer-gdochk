@@ -15,6 +15,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { colors, commonStyles } from '@/styles/commonStyles';
 import { StorageService } from '@/utils/storage';
 import { NotificationService } from '@/utils/notificationService';
+import { WhatsAppHelper } from '@/utils/whatsappHelper';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ interface AutoSendSettings {
   selectedDays: boolean[];
   timeWindow: { start: string; end: string };
   messagesPerDay: number;
+  whatsappPhoneNumber: string;
 }
 
 const PERSIAN_DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
@@ -37,6 +39,7 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
     selectedDays: [false, false, false, false, false, false, false],
     timeWindow: { start: '09:00', end: '17:00' },
     messagesPerDay: 1,
+    whatsappPhoneNumber: '',
   });
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
         selectedDays: appState.selectedDays,
         timeWindow: appState.timeWindow,
         messagesPerDay: appState.messagesPerDay,
+        whatsappPhoneNumber: appState.whatsappPhoneNumber || '',
       });
     } catch (error) {
       console.log('Error loading settings:', error);
@@ -80,6 +84,33 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
     const numValue = parseInt(value);
     if (!isNaN(numValue) && numValue > 0 && numValue <= 10) {
       setSettings({ ...settings, messagesPerDay: numValue });
+    }
+  };
+
+  const handlePhoneNumberChange = (value: string) => {
+    // Allow only digits, +, and common separators
+    const cleanValue = value.replace(/[^\d+\-\s()]/g, '');
+    setSettings({ ...settings, whatsappPhoneNumber: cleanValue });
+  };
+
+  const testWhatsAppNumber = async () => {
+    if (!settings.whatsappPhoneNumber.trim()) {
+      Alert.alert('خطا', 'لطفاً شماره تلفن را وارد کنید');
+      return;
+    }
+
+    if (!WhatsAppHelper.validatePhoneNumber(settings.whatsappPhoneNumber)) {
+      Alert.alert('خطا', 'شماره تلفن وارد شده معتبر نیست');
+      return;
+    }
+
+    const testMessage = 'سلام! این یک پیام تست از برنامه انتخابگر متن تصادفی است.';
+    const success = await WhatsAppHelper.openWhatsAppChat(settings.whatsappPhoneNumber, testMessage);
+    
+    if (success) {
+      Alert.alert('موفقیت', 'واتساپ با موفقیت باز شد');
+    } else {
+      Alert.alert('خطا', 'خطا در باز کردن واتساپ. لطفاً مطمئن شوید که واتساپ نصب شده است.');
     }
   };
 
@@ -116,6 +147,12 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
       }
     }
 
+    // Validate phone number if provided
+    if (settings.whatsappPhoneNumber.trim() && !WhatsAppHelper.validatePhoneNumber(settings.whatsappPhoneNumber)) {
+      Alert.alert('خطا', 'شماره تلفن واتساپ معتبر نیست');
+      return false;
+    }
+
     return true;
   };
 
@@ -132,6 +169,12 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
         settings.messagesPerDay
       );
 
+      // Save WhatsApp phone number
+      const formattedPhone = settings.whatsappPhoneNumber.trim() 
+        ? WhatsAppHelper.formatPhoneNumber(settings.whatsappPhoneNumber)
+        : null;
+      await StorageService.saveWhatsAppPhoneNumber(formattedPhone);
+
       // Generate new schedules if auto-send is enabled
       if (settings.isEnabled) {
         await NotificationService.generateSchedules();
@@ -139,7 +182,7 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
       } else {
         // Cancel all notifications if disabled
         await NotificationService.cancelAllNotifications();
-        Alert.alert('موفقیت', 'تنظیمات ذخیره شد و ارسال خودکار غیرفعال شد');
+        Alert.alert('موفقیت', 'تنظیمات ذخیره شد');
       }
 
       onSave(settings);
@@ -162,13 +205,40 @@ export default function SettingsModal({ visible, onClose, onSave }: SettingsModa
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <IconSymbol name="xmark" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>تنظیمات ارسال خودکار</Text>
+          <Text style={styles.title}>تنظیمات</Text>
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>ذخیره</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* WhatsApp Phone Number Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>شماره واتساپ</Text>
+            <View style={styles.phoneInputContainer}>
+              <TextInput
+                style={styles.phoneInput}
+                value={settings.whatsappPhoneNumber}
+                onChangeText={handlePhoneNumberChange}
+                placeholder="مثال: +989123456789 یا 09123456789"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="phone-pad"
+                textAlign="right"
+              />
+              <TouchableOpacity
+                style={styles.testButton}
+                onPress={testWhatsAppNumber}
+                disabled={!settings.whatsappPhoneNumber.trim()}
+              >
+                <IconSymbol name="paperplane" size={16} color={colors.text} />
+                <Text style={styles.testButtonText}>تست</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.settingDescription}>
+              با ذخیره شماره واتساپ، پیام‌ها مستقیماً برای این شماره ارسال خواهند شد
+            </Text>
+          </View>
+
           {/* Enable/Disable Toggle */}
           <View style={styles.section}>
             <View style={styles.settingRow}>
@@ -344,6 +414,36 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'right',
     lineHeight: 20,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  phoneInput: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.text,
+    marginRight: 12,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  testButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   daysContainer: {
     flexDirection: 'row',

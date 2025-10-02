@@ -106,6 +106,16 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
+
+          {appState?.whatsappPhoneNumber && (
+            <View style={styles.infoCard}>
+              <IconSymbol name="message" size={24} color={colors.success} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle}>شماره واتساپ ذخیره شده</Text>
+                <Text style={styles.infoValue}>{appState.whatsappPhoneNumber}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.featuresSection}>
@@ -133,6 +143,11 @@ export default function ProfileScreen() {
 
           <View style={styles.featureItem}>
             <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>ذخیره شماره واتساپ برای ارسال مستقیم</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
             <Text style={styles.featureText}>ذخیره‌سازی محلی داده‌ها</Text>
           </View>
 
@@ -155,7 +170,7 @@ export default function ProfileScreen() {
             onPress={() => setShowSettingsModal(true)}
           >
             <IconSymbol name="gear" size={24} color={colors.primary} />
-            <Text style={styles.actionButtonText}>تنظیمات ارسال خودکار</Text>
+            <Text style={styles.actionButtonText}>تنظیمات</Text>
             <IconSymbol name="chevron.left" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
 
@@ -195,7 +210,7 @@ export default function ProfileScreen() {
             این برنامه برای انتخاب تصادفی متن از فایل‌های اکسل طراحی شده است. 
             شما می‌توانید فایل اکسل خود را آپلود کنید و برنامه متن‌های موجود در ستون اول را استخراج می‌کند. 
             سپس با فشردن دکمه انتخاب تصادفی، یک متن بدون تکرار انتخاب شده و در کلیپ‌بورد کپی می‌شود. 
-            همچنین امکان اشتراک‌گذاری مستقیم در واتساپ نیز فراهم است.
+            همچنین امکان اشتراک‌گذاری مستقیم در واتساپ و ذخیره شماره تلفن برای ارسال مستقیم نیز فراهم است.
           </Text>
         </View>
       </ScrollView>
