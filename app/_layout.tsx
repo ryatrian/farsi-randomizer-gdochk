@@ -1,124 +1,132 @@
-import "react-native-reanimated";
-import React, { useEffect } from "react";
-import { useFonts } from "expo-font";
-import { Stack, router } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+
 import { SystemBars } from "react-native-edge-to-edge";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useColorScheme, Alert } from "react-native";
+import { Stack, router } from "expo-router";
+import { WidgetProvider } from "@/contexts/WidgetContext";
 import { useNetworkState } from "expo-network";
+import React, { useEffect } from "react";
 import {
   DarkTheme,
   DefaultTheme,
   Theme,
   ThemeProvider,
 } from "@react-navigation/native";
+import "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import { Button } from "@/components/button";
-import { WidgetProvider } from "@/contexts/WidgetContext";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useColorScheme, Alert, I18nManager } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+import { useFonts } from "expo-font";
+import {
+  Vazirmatn_400Regular,
+  Vazirmatn_500Medium,
+  Vazirmatn_600SemiBold,
+  Vazirmatn_700Bold,
+} from '@expo-google-fonts/vazirmatn';
+import { colors } from "@/styles/commonStyles";
+import { NotificationService } from "@/utils/notificationService";
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+// Enable RTL layout
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
+// Custom dark theme with our colors
+const CustomDarkTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: colors.primary,
+    background: colors.background,
+    card: colors.card,
+    text: colors.text,
+    border: colors.border,
+    notification: colors.accent,
+  },
 };
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    Vazirmatn_400Regular,
+    Vazirmatn_500Medium,
+    Vazirmatn_600SemiBold,
+    Vazirmatn_700Bold,
+  });
   const colorScheme = useColorScheme();
   const networkState = useNetworkState();
-  const [loaded] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-  });
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      
+      // Initialize notification service
+      NotificationService.setupNotificationHandlers();
+      NotificationService.startPeriodicCheck();
     }
   }, [loaded]);
 
-  React.useEffect(() => {
-    if (
-      !networkState.isConnected &&
-      networkState.isInternetReachable === false
-    ) {
+  useEffect(() => {
+    if (networkState.isConnected === false) {
       Alert.alert(
-        "🔌 You are offline",
-        "You can keep using the app! Your changes will be saved locally and synced when you are back online."
+        'اتصال اینترنت',
+        'اتصال اینترنت شما قطع شده است. برخی از ویژگی‌ها ممکن است کار نکنند.',
+        [{ text: 'متوجه شدم', style: 'default' }]
       );
     }
-  }, [networkState.isConnected, networkState.isInternetReachable]);
+  }, [networkState.isConnected]);
 
   if (!loaded) {
     return null;
   }
 
-  const CustomDefaultTheme: Theme = {
-    ...DefaultTheme,
-    dark: false,
-    colors: {
-      primary: "rgb(0, 122, 255)", // System Blue
-      background: "rgb(242, 242, 247)", // Light mode background
-      card: "rgb(255, 255, 255)", // White cards/surfaces
-      text: "rgb(0, 0, 0)", // Black text for light mode
-      border: "rgb(216, 216, 220)", // Light gray for separators/borders
-      notification: "rgb(255, 59, 48)", // System Red
-    },
-  };
-
-  const CustomDarkTheme: Theme = {
-    ...DarkTheme,
-    colors: {
-      primary: "rgb(10, 132, 255)", // System Blue (Dark Mode)
-      background: "rgb(1, 1, 1)", // True black background for OLED displays
-      card: "rgb(28, 28, 30)", // Dark card/surface color
-      text: "rgb(255, 255, 255)", // White text for dark mode
-      border: "rgb(44, 44, 46)", // Dark gray for separators/borders
-      notification: "rgb(255, 69, 58)", // System Red (Dark Mode)
-    },
-  };
   return (
-    <>
-      <StatusBar style="auto" animated />
-        <ThemeProvider
-          value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
-        >
-          <WidgetProvider>
-            <GestureHandlerRootView>
-            <Stack>
-              {/* Main app with tabs */}
+    <ErrorBoundary>
+      <WidgetProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ThemeProvider value={CustomDarkTheme}>
+            <SystemBars style="light" />
+            <StatusBar style="light" backgroundColor={colors.background} />
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.text,
+                headerTitleAlign: 'center',
+                headerTitleStyle: {
+                  fontWeight: '600',
+                  fontSize: 18,
+                  fontFamily: 'Vazirmatn_600SemiBold',
+                },
+              }}
+            >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-              {/* Modal Demo Screens */}
-              <Stack.Screen
-                name="modal"
-                options={{
-                  presentation: "modal",
-                  title: "Standard Modal",
-                }}
+              <Stack.Screen 
+                name="modal" 
+                options={{ 
+                  presentation: 'modal',
+                  title: 'مودال',
+                }} 
               />
-              <Stack.Screen
-                name="formsheet"
-                options={{
-                  presentation: "formSheet",
-                  title: "Form Sheet Modal",
-                  sheetGrabberVisible: true,
-                  sheetAllowedDetents: [0.5, 0.8, 1.0],
-                  sheetCornerRadius: 20,
-                }}
+              <Stack.Screen 
+                name="formsheet" 
+                options={{ 
+                  presentation: 'formSheet',
+                  title: 'فرم',
+                }} 
               />
-              <Stack.Screen
-                name="transparent-modal"
-                options={{
-                  presentation: "transparentModal",
-                  headerShown: false,
-                }}
+              <Stack.Screen 
+                name="transparent-modal" 
+                options={{ 
+                  presentation: 'transparentModal',
+                  title: 'مودال شفاف',
+                }} 
               />
             </Stack>
-            <SystemBars style={"auto"} />
-            </GestureHandlerRootView>
-          </WidgetProvider>
-        </ThemeProvider>
-    </>
+          </ThemeProvider>
+        </GestureHandlerRootView>
+      </WidgetProvider>
+    </ErrorBoundary>
   );
 }

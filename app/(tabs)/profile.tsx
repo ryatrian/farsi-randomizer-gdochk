@@ -1,91 +1,352 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/IconSymbol";
-import { GlassView } from "expo-glass-effect";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "@react-navigation/native";
+import { View, Text, StyleSheet, ScrollView, Platform, I18nManager, TouchableOpacity, Alert } from "react-native";
+import { colors, commonStyles } from "@/styles/commonStyles";
+import { StorageService, AppState } from "@/utils/storage";
+import { NotificationService } from "@/utils/notificationService";
+import SettingsModal from "@/components/SettingsModal";
+
+// Enable RTL layout
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 export default function ProfileScreen() {
-  const theme = useTheme();
+  const { colors: themeColors } = useTheme();
+  const [appState, setAppState] = useState<AppState | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const state = await StorageService.getAppState();
+      setAppState(state);
+    } catch (error) {
+      console.log('Error loading profile data:', error);
+    }
+  };
+
+  const handleClearAllData = () => {
+    Alert.alert(
+      'حذف تمام داده‌ها',
+      'آیا مطمئن هستید که می‌خواهید تمام داده‌ها را حذف کنید؟ این عمل قابل بازگشت نیست.',
+      [
+        { text: 'لغو', style: 'cancel' },
+        {
+          text: 'حذف',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await StorageService.clearAllData();
+              await NotificationService.cancelAllNotifications();
+              await loadData();
+              Alert.alert('موفقیت', 'تمام داده‌ها حذف شدند');
+            } catch (error) {
+              Alert.alert('خطا', 'خطا در حذف داده‌ها');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      <ScrollView
+    <SafeAreaView style={commonStyles.wrapper}>
+      <ScrollView 
         style={styles.container}
-        contentContainerStyle={[
-          styles.contentContainer,
-          Platform.OS !== 'ios' && styles.contentContainerWithTabBar
-        ]}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <GlassView style={[
-          styles.profileHeader,
-          Platform.OS !== 'ios' && { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
-        ]} glassEffectStyle="regular">
-          <IconSymbol name="person.circle.fill" size={80} color={theme.colors.primary} />
-          <Text style={[styles.name, { color: theme.colors.text }]}>John Doe</Text>
-          <Text style={[styles.email, { color: theme.dark ? '#98989D' : '#666' }]}>john.doe@example.com</Text>
-        </GlassView>
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <IconSymbol name="person.circle" size={80} color={colors.primary} />
+          </View>
+          <Text style={commonStyles.title}>درباره برنامه</Text>
+          <Text style={commonStyles.textSecondary}>
+            انتخابگر متن تصادفی فارسی
+          </Text>
+        </View>
 
-        <GlassView style={[
-          styles.section,
-          Platform.OS !== 'ios' && { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
-        ]} glassEffectStyle="regular">
-          <View style={styles.infoRow}>
-            <IconSymbol name="phone.fill" size={20} color={theme.dark ? '#98989D' : '#666'} />
-            <Text style={[styles.infoText, { color: theme.colors.text }]}>+1 (555) 123-4567</Text>
+        <View style={styles.infoSection}>
+          <View style={styles.infoCard}>
+            <IconSymbol name="info.circle" size={24} color={colors.primary} />
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>نسخه برنامه</Text>
+              <Text style={styles.infoValue}>1.0.0</Text>
+            </View>
           </View>
-          <View style={styles.infoRow}>
-            <IconSymbol name="location.fill" size={20} color={theme.dark ? '#98989D' : '#666'} />
-            <Text style={[styles.infoText, { color: theme.colors.text }]}>San Francisco, CA</Text>
+
+          <View style={styles.infoCard}>
+            <IconSymbol name="doc.text" size={24} color={colors.secondary} />
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>نوع فایل پشتیبانی شده</Text>
+              <Text style={styles.infoValue}>Excel (.xlsx, .xls)</Text>
+            </View>
           </View>
-        </GlassView>
+
+          <View style={styles.infoCard}>
+            <IconSymbol name="globe" size={24} color={colors.accent} />
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>زبان</Text>
+              <Text style={styles.infoValue}>فارسی (راست به چپ)</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoCard}>
+            <IconSymbol name="phone" size={24} color={colors.success} />
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>پلتفرم</Text>
+              <Text style={styles.infoValue}>
+                {Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'وب'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>ویژگی‌های برنامه</Text>
+          
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>آپلود و پردازش فایل‌های اکسل</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>انتخاب تصادفی متن بدون تکرار</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>کپی خودکار در کلیپ‌بورد</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>اشتراک‌گذاری در واتساپ</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>ذخیره‌سازی محلی داده‌ها</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>نمایش پیشرفت و آمار</Text>
+          </View>
+
+          <View style={styles.featureItem}>
+            <IconSymbol name="checkmark.circle" size={20} color={colors.success} />
+            <Text style={styles.featureText}>پشتیبانی کامل از RTL</Text>
+          </View>
+        </View>
+
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>عملیات</Text>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowSettingsModal(true)}
+          >
+            <IconSymbol name="gear" size={24} color={colors.primary} />
+            <Text style={styles.actionButtonText}>تنظیمات ارسال خودکار</Text>
+            <IconSymbol name="chevron.left" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.dangerButton]}
+            onPress={handleClearAllData}
+          >
+            <IconSymbol name="trash" size={24} color={colors.error} />
+            <Text style={[styles.actionButtonText, { color: colors.error }]}>
+              حذف تمام داده‌ها
+            </Text>
+            <IconSymbol name="chevron.left" size={16} color={colors.error} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>آمار استفاده</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{appState?.allTexts.length || 0}</Text>
+              <Text style={styles.statLabel}>کل متن‌ها</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{appState?.availableTexts.length || 0}</Text>
+              <Text style={styles.statLabel}>باقی‌مانده</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{appState?.usedTexts.length || 0}</Text>
+              <Text style={styles.statLabel}>استفاده شده</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.descriptionSection}>
+          <Text style={styles.sectionTitle}>توضیحات</Text>
+          <Text style={styles.descriptionText}>
+            این برنامه برای انتخاب تصادفی متن از فایل‌های اکسل طراحی شده است. 
+            شما می‌توانید فایل اکسل خود را آپلود کنید و برنامه متن‌های موجود در ستون اول را استخراج می‌کند. 
+            سپس با فشردن دکمه انتخاب تصادفی، یک متن بدون تکرار انتخاب شده و در کلیپ‌بورد کپی می‌شود. 
+            همچنین امکان اشتراک‌گذاری مستقیم در واتساپ نیز فراهم است.
+          </Text>
+        </View>
       </ScrollView>
+      
+      <SettingsModal
+        visible={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSave={(settings) => {
+          console.log('Settings saved:', settings);
+          loadData();
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    // backgroundColor handled dynamically
-  },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 100, // Space for floating tab bar
   },
-  contentContainerWithTabBar: {
-    paddingBottom: 100, // Extra padding for floating tab bar
-  },
-  profileHeader: {
+  header: {
     alignItems: 'center',
-    borderRadius: 12,
-    padding: 32,
+    marginBottom: 30,
+  },
+  iconContainer: {
     marginBottom: 16,
-    gap: 12,
   },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    // color handled dynamically
+  infoSection: {
+    marginBottom: 30,
   },
-  email: {
-    fontSize: 16,
-    // color handled dynamically
-  },
-  section: {
-    borderRadius: 12,
-    padding: 20,
-    gap: 12,
-  },
-  infoRow: {
+  infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  infoText: {
+  infoContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  infoValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  featuresSection: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  featureText: {
     fontSize: 16,
-    // color handled dynamically
+    color: colors.text,
+    marginLeft: 12,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flex: 1,
+  },
+  actionsSection: {
+    marginBottom: 30,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+    marginLeft: 12,
+    textAlign: 'right',
+    fontFamily: 'Vazirmatn_500Medium',
+  },
+  dangerButton: {
+    borderColor: colors.error,
+  },
+  statsSection: {
+    marginBottom: 30,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 4,
+    fontFamily: 'Vazirmatn_700Bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: 'Vazirmatn_400Regular',
+  },
+  descriptionSection: {
+    marginBottom: 20,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    lineHeight: 24,
+    textAlign: 'justify',
+    writingDirection: 'rtl',
+    fontFamily: 'Vazirmatn_400Regular',
   },
 });
